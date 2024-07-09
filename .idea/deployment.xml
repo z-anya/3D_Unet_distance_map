@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData">
+    <serverData>
+      <paths name="root@10.10.1.99:25320 (2)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/opt/data/private/3DUNet-distancemap" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/opt/data/private/DATA" local="$PROJECT_DIR$/../DATA" web="/" />
+            <mapping deploy="/opt/data/private/3DUNet-centerline" local="$PROJECT_DIR$/../3DUNet-centerline" web="/" />
+            <mapping deploy="/opt/data/private/3DUNet-baseline" local="$PROJECT_DIR$/../3DUNet-baseline" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+  </component>
+</project>
