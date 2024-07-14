@@ -8,7 +8,7 @@ import numpy as np
 import SimpleITK as sitk
 import torch
 from torch.utils.data import Dataset as dataset
-from dataset.transforms_origin import RandomCrop, RandomFlip_LR, RandomFlip_UD, Center_Crop, Compose, Resize
+from transforms import RandomCrop, RandomFlip_LR, RandomFlip_UD, Center_Crop, Compose, Resize
 
 class Train_Dataset(dataset):
     def __init__(self, args):
@@ -28,26 +28,27 @@ class Train_Dataset(dataset):
 
         ct = sitk.ReadImage(self.filename_list[index][0], sitk.sitkInt16)
         seg = sitk.ReadImage(self.filename_list[index][1], sitk.sitkUInt8)
-        bone = sitk.ReadImage(self.filename_list[index][2], sitk.sitkUInt8)
-
+        # bone = sitk.ReadImage(self.filename_list[index][2], sitk.sitkUInt8)
         ct_array = sitk.GetArrayFromImage(ct)
         seg_array = sitk.GetArrayFromImage(seg)
-        bone_array = sitk.GetArrayFromImage(bone)
-
+        # bone_array = sitk.GetArrayFromImage(bone)
+        # print(ct_array.shape, seg_array.shape)
         ct_array = ct_array / self.args.norm_factor
         ct_array = ct_array.astype(np.float32)
 
         ct_array = torch.FloatTensor(ct_array).unsqueeze(0)
         seg_array = torch.FloatTensor(seg_array).unsqueeze(0)
-        bone_array = torch.FloatTensor(bone_array).unsqueeze(0)
+        # bone_array = torch.FloatTensor(bone_array).unsqueeze(0)
 
         if self.transforms:
-            ct_array, seg_array, bone_array = self.transforms(ct_array, seg_array, bone_array)
+            # ct_array, seg_array, bone_array = self.transforms(ct_array, seg_array, bone_array)
+            ct_array, seg_array = self.transforms(ct_array, seg_array)
 
         # print(ct_array.shape, seg_array.shape, bone_array.shape)
 
 
-        return ct_array, seg_array.squeeze(0), bone_array
+        # return ct_array, seg_array.squeeze(0), bone_array
+        return ct_array, seg_array.squeeze(0)
 
     def __len__(self):
         return len(self.filename_list)
@@ -63,12 +64,19 @@ class Train_Dataset(dataset):
         return file_name_list
 
 if __name__ == "__main__":
-    sys.path.append('/ssd/lzq/3DUNet')
+    sys.path.append('/home/dalhxwlyjsuo/guest_lizg/unet')
     from config import args
     train_ds = Train_Dataset(args)
 
     # 定义数据加载
     train_dl = DataLoader(train_ds, 2, False, num_workers=1)
+    from models.zyx_Unet import get_args, UnitedNet
 
-    for i, (ct, seg, bone) in enumerate(train_dl):
-        print(i, ct.size(), seg.size(), bone.size())
+    args = get_args()
+    print(f"加载模型")
+    model = UnitedNet(args)
+    import pdb
+    # pdb.set_trace()
+    for i, (ct, seg) in enumerate(train_dl):
+        print(f"{i}")
+        output = model(ct)

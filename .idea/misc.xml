@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="ProjectRootManager" version="2" project-jdk-name="Remote Python 3.8.5 (sftp://root@10.10.1.99:25320/opt/tools/anaconda3/bin/python3.8)" project-jdk-type="Python SDK" />
+  <component name="Black">
+    <option name="sdkName" value="Python 3.10 (3D_Unet_distance_map)" />
+  </component>
+  <component name="ProjectRootManager" version="2" project-jdk-name="Remote Python 3.10.13 (sftp://guest_lizg@BSCC-N42A14P@ssh.cn-zhongwei-1.paracloud.com:22/home/dalhxwlyjsuo/guest_lizg/.conda/envs/3d_unet/bin/python)" project-jdk-type="Python SDK" />
 </project>

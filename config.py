@@ -19,8 +19,8 @@ parser.add_argument('--slice_down_scale', type=float, default=1.0, help='')
 parser.add_argument('--valid_rate', type=float, default=0.2, help='')
 
 # data in/out and dataset
-parser.add_argument('--dataset_path',default = '/opt/data/private/3DUNet2branch/3DUnet/dataset/fix_g2b_otsu',help='fixed trainset root path')
-parser.add_argument('--test_data_path',default = '/opt/data/private/3DUNet-Pytorch-master/3DUNet-Pytorch-master/dataset/fixed_data_filter',help='Testset path')
+parser.add_argument('--dataset_path',default = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/fixed_data',help='fixed trainset root path')
+parser.add_argument('--test_data_path',default = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/fixed_data',help='Testset path')
 parser.add_argument('--save',default='ResUNet',help='save path of trained model')
 parser.add_argument('--batch_size', type=list, default=1,help='batch size of trainset')
 
@@ -28,11 +28,11 @@ parser.add_argument('--batch_size', type=list, default=1,help='batch size of tra
 parser.add_argument('--epochs', type=int, default=200, metavar='N',help='number of epochs to train (default: 200)')
 parser.add_argument('--lr', type=float, default=0.00001, metavar='LR',help='learning rate (default: 0.0001)')
 parser.add_argument('--early-stop', default=30, type=int, help='early stopping (default: 30)')
-parser.add_argument('--crop_size', type=int, default=48)
+parser.add_argument('--crop_size', type=int, default=64)
 parser.add_argument('--val_crop_max_size', type=int, default=96)
 
 # test
-parser.add_argument('--test_cut_size', type=int, default=48, help='size of sliding window')
+parser.add_argument('--test_cut_size', type=int, default=64, help='size of sliding window')
 parser.add_argument('--test_cut_stride', type=int, default=24, help='stride of sliding window')
 parser.add_argument('--postprocess', type=bool, default=False, help='post process')
 

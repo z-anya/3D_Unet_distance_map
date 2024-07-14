@@ -57,18 +57,16 @@ class RandomCrop:
             end = slices
         return start, end
 
-    def __call__(self, img, mask, bone):
+    def __call__(self, img, mask):
 
         ss, es = self._get_range(mask.size(1), self.slices)
 
         # print(self.shape, img.shape, mask.shape)
         tmp_img = torch.zeros((img.size(0), self.slices, img.size(2), img.size(3)))
         tmp_mask = torch.zeros((mask.size(0), self.slices, mask.size(2), mask.size(3)))
-        tmp_bone = torch.zeros((bone.size(0), self.slices, bone.size(2), bone.size(3)))
         tmp_img[:, :es - ss] = img[:, ss:es]
         tmp_mask[:, :es - ss] = mask[:, ss:es]
-        tmp_bone[:, :es - ss] = bone[:, ss:es]
-        return tmp_img, tmp_mask, tmp_bone
+        return tmp_img, tmp_mask
 
 
 class RandomFlip_LR:
@@ -80,9 +78,9 @@ class RandomFlip_LR:
             img = img.flip(2)
         return img
 
-    def __call__(self, img, mask, bone):
+    def __call__(self, img, mask):
         prob = (random.uniform(0, 1), random.uniform(0, 1))
-        return self._flip(img, prob), self._flip(mask, prob), self._flip(bone, prob)
+        return self._flip(img, prob), self._flip(mask, prob)
 
 
 class RandomFlip_UD:
@@ -94,9 +92,9 @@ class RandomFlip_UD:
             img = img.flip(3)
         return img
 
-    def __call__(self, img, mask, bone):
+    def __call__(self, img, mask):
         prob = (random.uniform(0, 1), random.uniform(0, 1))
-        return self._flip(img, prob), self._flip(mask, prob), self._flip(bone, prob)
+        return self._flip(img, prob), self._flip(mask, prob)
 
 
 class RandomRotate:
@@ -157,7 +155,7 @@ class Compose:
     def __init__(self, transforms):
         self.transforms = transforms
 
-    def __call__(self, img, mask, bone):
+    def __call__(self, img, mask):
         for t in self.transforms:
-            img, mask, bone = t(img, mask, bone)
-        return img, mask, bone
+            img, mask = t(img, mask)
+        return img, mask
