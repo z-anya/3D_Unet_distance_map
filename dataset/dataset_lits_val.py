@@ -6,7 +6,7 @@ import numpy as np
 import SimpleITK as sitk
 import torch
 from torch.utils.data import Dataset as dataset
-from dataset.transforms_origin import Center_Crop, Compose
+from .transforms import Center_Crop, Compose
 
 
 class Val_Dataset(dataset):

@@ -5,7 +5,7 @@
 import torch
 import torch.nn as nn
 
-
+import pdb
 class DiceLoss(nn.Module):
 
     def __init__(self):
@@ -14,7 +14,6 @@ class DiceLoss(nn.Module):
     def forward(self, pred, target):
 
         # pred = pred.squeeze(dim=1)
-
         smooth = 1
 
         dice = 0.

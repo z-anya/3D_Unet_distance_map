@@ -1,4 +1,5 @@
 import argparse
+
 parser = argparse.ArgumentParser(description='Hyper-parameters management')
 
 # Hardware options
@@ -30,13 +31,27 @@ parser.add_argument('--lr', type=float, default=0.00001, metavar='LR',help='lear
 parser.add_argument('--early-stop', default=30, type=int, help='early stopping (default: 30)')
 parser.add_argument('--crop_size', type=int, default=64)
 parser.add_argument('--val_crop_max_size', type=int, default=96)
+parser.add_argument('--weight_decay', type=float, default=1e-4)
+parser.add_argument('--warmup_steps', type=int, default=0)
 
 # test
 parser.add_argument('--test_cut_size', type=int, default=64, help='size of sliding window')
 parser.add_argument('--test_cut_stride', type=int, default=24, help='stride of sliding window')
 parser.add_argument('--postprocess', type=bool, default=False, help='post process')
 
+#deepspeed
+parser.add_argument('--local_rank', type=int, default=0, help='Input batch size for training (default: 6)')
+parser.add_argument('--world_size', type=int, default=1, )
+parser.add_argument('--micro_batch_size_per_gpu', type=int, default=1, )
+parser.add_argument('--gradient_accumulation_steps', type=int, default=1, )
+parser.add_argument('--ds_stage', type=int, default=1)
+
+# model parameters
+parser.add_argument('--upsample_type', type=str, default='')
+parser.add_argument('--downsample_type', type=str, default='')
+parser.add_argument('--init_channel', type=int, default=1)
+parser.add_argument('--encoder_start_channel', type=int, default=32)
+parser.add_argument('--encoder_layer_num', type=int, default=6)
 
 args = parser.parse_args()
-
 

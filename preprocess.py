@@ -5,6 +5,8 @@ import numpy as np
 import os
 import SimpleITK as sitk
 import random
+
+from natsort import natsort
 from scipy import ndimage
 from os.path import join
 import config
@@ -137,48 +139,76 @@ class LITS_preprocess:
 
         self.valid_rate = args.valid_rate
 
-    def fix_data(self, ct_path=None, label_path=None):
-        if not os.path.exists(self.fixed_path):  # 创建保存目录
-            os.makedirs(join(self.fixed_path, 'ct'))
-            os.makedirs(join(self.fixed_path, 'labels'))
+    def fix_data(self, ct_path=None, seg_path=None, cl_path=None, dm_path=None):
+      # 创建保存目录
+        os.makedirs(join(self.fixed_path, 'ct'), exist_ok=True)
+        os.makedirs(join(self.fixed_path, 'seg'), exist_ok=True)
+        os.makedirs(join(self.fixed_path, 'cl'), exist_ok=True)
+        os.makedirs(join(self.fixed_path, 'dm'), exist_ok=True)
         if ct_path is not None:
             ct_folder_path = ct_path
         else:
             ct_folder_path = os.path.join(self.raw_root_path, 'WORD', 'WORD-V0.1.0', 'imagesTr')
 
-        if label_path is not None:
-            labels_folder_path = label_path
+        if seg_path is not None:
+            seg_folder_path = seg_path
         else:
-            labels_folder_path = os.path.join(self.raw_root_path, 'WORD', 'label_bone_colon')
+            seg_folder_path = os.path.join(self.raw_root_path, 'WORD', 'label_bone_colon')
 
-        file_list = os.listdir(ct_folder_path)
-        Numbers = len(file_list)
+        if cl_path is not None:
+            cl_folder_path = cl_path
+        else:
+            cl_folder_path = os.path.join(self.raw_root_path, 'WORD', 'label_bone_colon')
+
+        if dm_path is not None:
+            dm_folder_path = dm_path
+        else:
+            dm_folder_path = os.path.join(self.raw_root_path, 'WORD', 'label_bone_colon')
+
+        ct_file_list = natsort.natsorted(os.listdir(ct_folder_path))
+        seg_file_list = natsort.natsorted(os.listdir(seg_folder_path))
+        cl_file_list = natsort.natsorted(os.listdir(cl_folder_path))
+        dm_file_list =natsort.natsorted(os.listdir(dm_folder_path))
+        Numbers = len(ct_file_list)
         print('Total numbers of samples is :', Numbers)
-        for ct_file, i in zip(file_list, range(Numbers)):
+        for ct_file, seg_file, cl_file, dm_file, i in zip(ct_file_list, seg_file_list, cl_file_list, dm_file_list, range(Numbers)):
             print("==== {} | {}/{} ====".format(ct_file, i + 1, Numbers))
+            # if "word_0049" not in ct_file:
+            #     continue
+            # pdb.set_trace()
+            print(f"ct: {ct_file}, seg: {seg_file}, cl: {cl_file}, dm: {dm_file}")
             ct_path = os.path.join(ct_folder_path, ct_file)
+            seg_path = os.path.join(seg_folder_path, seg_file)
+            cl_path = os.path.join(cl_folder_path, cl_file)
+            dm_path = os.path.join(dm_folder_path, dm_file)
 
-            labels_path = os.path.join(labels_folder_path, ct_file)
-
-            new_ct, new_labels = self.process(ct_path, labels_path, classes=self.classes)
-            if new_ct != None and new_labels !=None:
+            new_ct, new_seg, new_cl, new_dm = self.process(ct_path, seg_path, cl_path, dm_path, classes=self.classes)
+            if new_ct != None and new_seg !=None and new_cl != None and new_dm != None:
                 sitk.WriteImage(new_ct, os.path.join(self.fixed_path, 'ct', ct_file))
-                sitk.WriteImage(new_labels, os.path.join(self.fixed_path, 'labels', ct_file.replace('.nii.gz', '.nii.gz')))
+                sitk.WriteImage(new_seg, os.path.join(self.fixed_path, 'seg', ct_file))
+                sitk.WriteImage(new_cl, os.path.join(self.fixed_path, 'cl', ct_file))
+                sitk.WriteImage(new_dm, os.path.join(self.fixed_path, 'dm', ct_file))
 
-    def process(self, ct_path, mask_path, classes=None):
+    def process(self, ct_path, seg_path, cl_path, dm_path, classes=None):
         ct = sitk.ReadImage(ct_path, sitk.sitkFloat64)
         ct_array = sitk.GetArrayFromImage(ct)
 
-        labels = sitk.ReadImage(mask_path, sitk.sitkInt8)
-        labels_array = sitk.GetArrayFromImage(labels)
+        seg = sitk.ReadImage(seg_path, sitk.sitkInt8)
+        seg_array = sitk.GetArrayFromImage(seg)
+
+        cl = sitk.ReadImage(cl_path, sitk.sitkInt8)
+        cl_array = sitk.GetArrayFromImage(cl)
+
+        dm = sitk.ReadImage(dm_path, sitk.sitkFloat64)
+        dm_array = sitk.GetArrayFromImage(dm)
 
 
 
-        print("Ori shape:", ct_array.shape, labels_array.shape)
+        print("Ori shape:", ct_array.shape, seg_array.shape, cl_array.shape, dm_array.shape)
 
         if classes==2:
             # 将金标准中肝脏和肝肿瘤的标签融合为一个
-            labels_array[labels_array > 0] = 1
+            seg_array[seg_array > 0] = 1
         # # 将灰度值在阈值之外的截断掉
         # ct_array[ct_array > self.upper] = self.upper
         # ct_array[ct_array < self.lower] = self.lower
@@ -190,13 +220,22 @@ class LITS_preprocess:
         ct_array = ndimage.zoom(ct_array,
                                 (ct.GetSpacing()[-1] / self.slice_down_scale, self.xy_down_scale, self.xy_down_scale),
                                 order=3)
-        labels_array = ndimage.zoom(labels_array,
+        seg_array = ndimage.zoom(seg_array,
                                     (ct.GetSpacing()[-1] / self.slice_down_scale, self.xy_down_scale,
                                      self.xy_down_scale),
                                     order=0)
+        cl_array = ndimage.zoom(cl_array,
+                                 (ct.GetSpacing()[-1] / self.slice_down_scale, self.xy_down_scale,
+                                  self.xy_down_scale),
+                                 order=0)
+        dm_array = ndimage.zoom(dm_array,
+                                 (ct.GetSpacing()[-1] / self.slice_down_scale, self.xy_down_scale,
+                                  self.xy_down_scale),
+                                 order=0)
 
         # 找到肝脏区域开始和结束的slice，并各向外扩张
-        z = np.any(labels_array, axis=(1, 2))
+        # pdb.set_trace()
+        z = np.any(seg_array, axis=(1, 2))
         start_slice, end_slice = np.where(z)[0][[0, -1]]
 
         # 两个方向上各扩张个slice
@@ -205,8 +244,8 @@ class LITS_preprocess:
         else:
             start_slice -= self.expand_slice
 
-        if end_slice + self.expand_slice >= labels_array.shape[0]:
-            end_slice = labels_array.shape[0] - 1
+        if end_slice + self.expand_slice >= seg_array.shape[0]:
+            end_slice = seg_array.shape[0] - 1
         else:
             end_slice += self.expand_slice
 
@@ -214,10 +253,12 @@ class LITS_preprocess:
         # 如果这时候剩下的slice数量不足size，直接放弃，这样的数据很少
         if end_slice - start_slice + 1 < self.size:
             print('Too little slice，give up the sample:', ct_path)
-            return None, None
+            return None, None, None, None
         #截取保留区域
         ct_array = ct_array[start_slice:end_slice + 1, :, :]
-        labels_array = labels_array[start_slice:end_slice + 1, :, :]
+        seg_array = seg_array[start_slice:end_slice + 1, :, :]
+        cl_array = cl_array[start_slice:end_slice + 1, :, :]
+        dm_array = dm_array[start_slice:end_slice + 1, :, :]
 
         # slice_data = ct_array[40, :, :]
         # slice_target_branch1 = mask_array[40, :, :]
@@ -230,7 +271,7 @@ class LITS_preprocess:
         # plt.imshow(slice_target_branch1, cmap='gray')
         # plt.show()
 
-        print("Preprocessed shape:", ct_array.shape, labels_array.shape)
+        print("Preprocessed shape:", ct_array.shape, seg_array.shape, cl_array.shape, dm_array.shape)
 
         # 保存为对应的格式
         new_ct = sitk.GetImageFromArray(ct_array)
@@ -240,22 +281,37 @@ class LITS_preprocess:
                            ct.GetSpacing()[1] * int(1 / self.xy_down_scale), self.slice_down_scale))
 
 
-        new_labels = sitk.GetImageFromArray(labels_array)
-        new_labels.SetDirection(ct.GetDirection())
-        new_labels.SetOrigin(ct.GetOrigin())
-        new_labels.SetSpacing((ct.GetSpacing()[0] * int(1 / self.xy_down_scale),
+        new_seg = sitk.GetImageFromArray(seg_array)
+        new_seg.SetDirection(ct.GetDirection())
+        new_seg.SetOrigin(ct.GetOrigin())
+        new_seg.SetSpacing((ct.GetSpacing()[0] * int(1 / self.xy_down_scale),
                              ct.GetSpacing()[1] * int(1 / self.xy_down_scale), self.slice_down_scale))
-        return new_ct, new_labels
+
+        new_cl = sitk.GetImageFromArray(cl_array)
+        new_cl.SetDirection(ct.GetDirection())
+        new_cl.SetOrigin(ct.GetOrigin())
+        new_cl.SetSpacing((ct.GetSpacing()[0] * int(1 / self.xy_down_scale),
+                            ct.GetSpacing()[1] * int(1 / self.xy_down_scale), self.slice_down_scale))
+
+        new_dm = sitk.GetImageFromArray(dm_array)
+        new_dm.SetDirection(ct.GetDirection())
+        new_dm.SetOrigin(ct.GetOrigin())
+        new_dm.SetSpacing((ct.GetSpacing()[0] * int(1 / self.xy_down_scale),
+                            ct.GetSpacing()[1] * int(1 / self.xy_down_scale), self.slice_down_scale))
+        return new_ct, new_seg, new_cl, new_dm
 
     def write_train_val_name_list(self):
-        data_name_list = os.listdir(join(self.fixed_path, "ct"))
-        data_num = len(data_name_list)
+        ct_name_list = natsort.natsorted(os.listdir(join(self.fixed_path, "ct")))
+        # seg_name_list = os.listdir(join(self.fixed_path, "seg"))
+        # cl_name_list = os.listdir(join(self.fixed_path, "cl"))
+        # dm_name_list = os.listdir(join(self.fixed_path, "dm"))
+        data_num = len(ct_name_list)
         print('the fixed dataset total numbers of samples is :', data_num)
-        random.shuffle(data_name_list)
+        random.shuffle(ct_name_list)
 
         assert self.valid_rate < 1.0
-        train_name_list = data_name_list[0:int(data_num * (1 - self.valid_rate))]
-        val_name_list = data_name_list[
+        train_name_list = ct_name_list[0:int(data_num * (1 - self.valid_rate))]
+        val_name_list = ct_name_list[
                         int(data_num * (1 - self.valid_rate)):int(data_num * ((1 - self.valid_rate) + self.valid_rate))]
 
         self.write_name_list(train_name_list, "train_path_list.txt")
@@ -265,8 +321,10 @@ class LITS_preprocess:
         f = open(join(self.fixed_path, file_name), 'w')
         for name in name_list:
             ct_path = os.path.join(self.fixed_path, 'ct', name)
-            labels_path = os.path.join(self.fixed_path, 'labels', name)
-            f.write(ct_path + ' ' + labels_path + "\n")
+            seg_path = os.path.join(self.fixed_path, 'seg', name)
+            cl_path = os.path.join(self.fixed_path, 'cl', name)
+            dm_path = os.path.join(self.fixed_path, 'dm', name)
+            f.write(ct_path + ' ' + seg_path + ' ' + cl_path + ' ' + dm_path + ' ' + "\n")
         f.close()
 
 def rename():
@@ -290,13 +348,14 @@ def rename():
 
 
 if __name__ == '__main__':
-    # raw_dataset_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/WORD/WORD-V0.1.0/imagesTr'
-    # label_dataset_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/WORD/word2colon/labelTr_colon'
-    # fixed_dataset_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/fixed_data'
-    # args = config.args
-    # tool = LITS_preprocess(raw_dataset_path, fixed_dataset_path, args)
-    # tool.fix_data(raw_dataset_path, 'ct')  # 对原始图像进行修剪并保存
-    # tool.fix_data(label_dataset_path, label_dataset_path)  # 对原始图像进行修剪并保存
-    # tool.write_train_val_name_list()  # 创建索引txt文件
-    rename()
+    raw_dataset_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/WORD/WORD-V0.1.0/imagesTr'
+    label_dataset_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/WORD/word2colon/labelTr_colon'
+    cl_dataset_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/cnterline/WORD/colon_skeleton_expansion'
+    dm_dataset_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/WORD/label_bone_colon_dm'
+    fixed_dataset_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/fixed_data'
+    args = config.args
+    tool = LITS_preprocess(raw_dataset_path, fixed_dataset_path, args)
+    # tool.fix_data(raw_dataset_path, label_dataset_path, cl_dataset_path, dm_dataset_path)  # 对原始图像进行修剪并保存
+    tool.write_train_val_name_list()  # 创建索引txt文件
+    # rename()
 

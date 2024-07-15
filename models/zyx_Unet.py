@@ -92,8 +92,9 @@ class DecoderZyxUNet(nn.Module):
     def __init__(self, config,  *args, **kwargs):
         super().__init__(*args, **kwargs)
         start_channel = config.encoder_start_channel
-        dim_in_and_out, _ = get_layer_dim(config.encoder_layer_num, config.encoder_start_channel, is_decoder=True)
+        dim_in_and_out, last_channel = get_layer_dim(config.encoder_layer_num, config.encoder_start_channel, is_decoder=True)
         self.up_blocks = nn.ModuleList()
+        self.conv_out = nn.Conv3d(last_channel, config.init_channel, kernel_size=3, padding=1, stride=1)
         for (dim_in, dim_out) in dim_in_and_out:
             self.up_blocks.append(nn.Sequential(
                 nn.Conv3d(dim_in, dim_out, kernel_size=3, padding=1, stride=1),
@@ -112,6 +113,7 @@ class DecoderZyxUNet(nn.Module):
         for block, map_feature in zip(self.up_blocks, maps):
             # print(f"x: {x.shape}, map_feature: {map_feature.shape}")
             x = block(x + map_feature)
+        x = self.conv_out(x)
         return x
 
 class InterpolateWrapper(nn.Module):

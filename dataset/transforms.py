@@ -57,16 +57,21 @@ class RandomCrop:
             end = slices
         return start, end
 
-    def __call__(self, img, mask):
+    def __call__(self, img, mask, cl, dm):
 
         ss, es = self._get_range(mask.size(1), self.slices)
 
         # print(self.shape, img.shape, mask.shape)
         tmp_img = torch.zeros((img.size(0), self.slices, img.size(2), img.size(3)))
         tmp_mask = torch.zeros((mask.size(0), self.slices, mask.size(2), mask.size(3)))
+        tmp_cl = torch.zeros((cl.size(0), self.slices, cl.size(2), cl.size(3)))
+        tmp_dm = torch.zeros((dm.size(0), self.slices, dm.size(2), dm.size(3)))
+
         tmp_img[:, :es - ss] = img[:, ss:es]
         tmp_mask[:, :es - ss] = mask[:, ss:es]
-        return tmp_img, tmp_mask
+        tmp_cl[:, :es - ss] = mask[:, ss:es]
+        tmp_dm[:, :es - ss] = mask[:, ss:es]
+        return tmp_img, tmp_mask, tmp_cl, tmp_dm
 
 
 class RandomFlip_LR:
@@ -78,9 +83,9 @@ class RandomFlip_LR:
             img = img.flip(2)
         return img
 
-    def __call__(self, img, mask):
+    def __call__(self, img, mask, cl, dm):
         prob = (random.uniform(0, 1), random.uniform(0, 1))
-        return self._flip(img, prob), self._flip(mask, prob)
+        return self._flip(img, prob), self._flip(mask, prob), self._flip(cl, prob), self._flip(dm, prob)
 
 
 class RandomFlip_UD:
@@ -92,9 +97,9 @@ class RandomFlip_UD:
             img = img.flip(3)
         return img
 
-    def __call__(self, img, mask):
+    def __call__(self, img, mask, cl, dm):
         prob = (random.uniform(0, 1), random.uniform(0, 1))
-        return self._flip(img, prob), self._flip(mask, prob)
+        return self._flip(img, prob), self._flip(mask, prob), self._flip(cl, prob), self._flip(dm, prob)
 
 
 class RandomRotate:
@@ -117,7 +122,7 @@ class Center_Crop:
         if self.max_size % self.base:
             self.max_size = self.max_size - self.max_size % self.base  # max_size为限制最大采样slices数，防止显存溢出，同时也应为16的倍数
 
-    def __call__(self, img, label, bone):
+    def __call__(self, img, label, cl, dm):
         if img.size(1) < self.base:
             return None
         slice_num = img.size(1) - img.size(1) % self.base
@@ -128,8 +133,9 @@ class Center_Crop:
 
         crop_img = img[:, left:right]
         crop_label = label[:, left:right]
-        crop_bone = bone[:, left:right]
-        return crop_img, crop_label,crop_bone
+        crop_cl = cl[:, left:right]
+        crop_dm = dm[:, left:right]
+        return crop_img, crop_label, crop_cl, crop_dm
 
 
 class ToTensor:
@@ -155,7 +161,7 @@ class Compose:
     def __init__(self, transforms):
         self.transforms = transforms
 
-    def __call__(self, img, mask):
+    def __call__(self, img, mask, cl, dm):
         for t in self.transforms:
-            img, mask = t(img, mask)
-        return img, mask
+            img, mask, cl, dm = t(img, mask, cl, dm)
+        return img, mask, cl, dm
