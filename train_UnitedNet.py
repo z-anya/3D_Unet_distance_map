@@ -194,9 +194,10 @@ def train_main(args):
 
     for epoch in range(args.epochs):
         train_one_epoch(seg_model, cl_model, dm_model, train_dataloader, val_dataloader, epoch, device, loss_func)
-        seg_model.save_checkpoint("checkpoints/seg", tag=f"diff_igpt_{epoch}")
-        cl_model.save_checkpoint("checkpoints/cl", tag=f"diff_igpt_{epoch}")
-        dm_model.save_checkpoint("checkpoints/dm", tag=f"diff_igpt_{epoch}")
+        if epoch % 50 == 0:
+            seg_model.save_checkpoint("checkpoints/seg", tag=f"diff_igpt_{epoch}")
+            cl_model.save_checkpoint("checkpoints/cl", tag=f"diff_igpt_{epoch}")
+            dm_model.save_checkpoint("checkpoints/dm", tag=f"diff_igpt_{epoch}")
 
 def train_one_epoch(seg_model,
                     cl_model,
@@ -242,31 +243,63 @@ def train_one_epoch(seg_model,
                              Epoch=epoch)
             del ct, seg, cl, dm, seg_loss, cl_loss, dm_loss
             torch.cuda.empty_cache()
-            # if i  % 1000 == 0:
-            #     print(f"current step {i}")
-            #     val_step(model, val_dataloader, epoch, device)
+            if i  % 1000 == 0:
+                print(f"current step {i}")
+                val_step(seg_model, cl_model, dm_model, val_dataloader, epoch, device, loss_func)
 
 
 
-def val_step(model, val_dataloader, epoch, device):
-    model.eval()
+def val_step(seg_model,
+            cl_model,
+            dm_model,
+            val_dataloader, epoch, device, loss_func):
+    seg_model.eval()
+    cl_model.eval()
+    dm_model.eval()
     eval_steps = 0
-    eval_loss = 0
+    eval_seg_loss = 0
+    eval_cl_loss = 0
+    eval_dm_loss = 0
     with tqdm(range(len(val_dataloader))) as pbar:
-        for i, batch in zip(pbar, val_dataloader):
-            batch = batch.reshape(-1, batch.shape[-1]).to(device)
-            label = batch
+        for i, (ct, seg, cl, dm) in zip(pbar, val_dataloader):
             with torch.no_grad():
-                output = model(batch, labels=label)
-            # batch shape: (b, t, c, h, w) t is length of frame sequence
-            loss = output.loss
-            eval_loss += loss
-            eval_steps += 1
-            del batch, label, output
-            torch.cuda.empty_cache()
-    wandb.log({"val_loss": eval_loss / eval_steps})
-    model.train()
+                ct = ct.to(device)
+                seg = seg.to(device)
+                cl = cl.to(device)
+                dm = dm.to(device)
+                # encoder
+                cl_maps, cl_mid = cl_model.encoder(ct)
+                dm_maps, dm_mid = dm_model.encoder(ct)
+                seg_maps, seg_mid = seg_model.encoder(ct, cl_maps)
 
+                # attn block
+                seg_mid = seg_model.attn_block(seg_mid, dm_mid)
+
+                # decoder
+                seg_output = seg_model.decoder(seg_mid, seg_maps)
+                cl_output = cl_model.decoder(cl_mid, cl_maps)
+                dm_output = dm_model.decoder(dm_mid, dm_maps)
+                # loss
+                seg_loss = loss_func(seg_output, seg)
+                cl_loss = loss_func(cl_output, cl)
+                dm_loss = loss_func(dm_output, dm)
+            # batch shape: (b, t, c, h, w) t is length of frame sequence
+            eval_seg_loss += seg_loss
+            eval_cl_loss += cl_loss
+            eval_dm_loss += dm_loss
+            eval_steps += 1
+            del seg_output, cl_output, dm_output, seg_loss, cl_loss, dm_loss
+            torch.cuda.empty_cache()
+    wandb.log({"val_seg_loss": eval_seg_loss / eval_steps,
+               "val_cl_loss": eval_cl_loss / eval_steps,
+               "val_dm_loss": eval_dm_loss / eval_steps,})
+    seg_model.train()
+    cl_model.train()
+    dm_model.train()
+
+
+def test_step(seg_model, cl_model, dm_model, val_dataloader, epoch, device, loss_func):
+    pass
 
 
 

@@ -19,25 +19,27 @@ class Val_Dataset(dataset):
 
     def __getitem__(self, index):
 
-        ct = sitk.ReadImage(self.filename_list[index][0], sitk.sitkInt16)
-        seg = sitk.ReadImage(self.filename_list[index][1], sitk.sitkUInt8)
-        bone = sitk.ReadImage(self.filename_list[index][2], sitk.sitkUInt8)
+        ct = sitk.ReadImage(self.filename_list[index][0] )
+        seg = sitk.ReadImage(self.filename_list[index][1])
+        cl = sitk.ReadImage(self.filename_list[index][2])
+        dm = sitk.ReadImage(self.filename_list[index][3])
 
         ct_array = sitk.GetArrayFromImage(ct)
         seg_array = sitk.GetArrayFromImage(seg)
-        bone_array = sitk.GetArrayFromImage(bone)
-
+        cl_array = sitk.GetArrayFromImage(cl)
+        dm_array = sitk.GetArrayFromImage(dm)
+        # print(ct_array.shape, seg_array.shape)
         ct_array = ct_array / self.args.norm_factor
         ct_array = ct_array.astype(np.float32)
-
         ct_array = torch.FloatTensor(ct_array).unsqueeze(0)
         seg_array = torch.FloatTensor(seg_array).unsqueeze(0)
-        bone_array = torch.FloatTensor(bone_array).unsqueeze(0)
+        cl_array = torch.FloatTensor(cl_array).unsqueeze(0)
+        dm_array = torch.FloatTensor(dm_array).unsqueeze(0)
 
         if self.transforms:
-            ct_array, seg_array, bone_array = self.transforms(ct_array, seg_array, bone_array)
+            ct_array, seg_array, cl_array, dm_array = self.transforms(ct_array, seg_array, cl_array, dm_array)
 
-        return ct_array, seg_array.squeeze(0), bone_array
+        return ct_array, seg_array, cl_array, dm_array
 
     def __len__(self):
         return len(self.filename_list)

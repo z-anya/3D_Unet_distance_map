@@ -23,7 +23,7 @@ parser.add_argument('--valid_rate', type=float, default=0.2, help='')
 parser.add_argument('--dataset_path',default = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/fixed_data',help='fixed trainset root path')
 parser.add_argument('--test_data_path',default = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/fixed_data',help='Testset path')
 parser.add_argument('--save',default='ResUNet',help='save path of trained model')
-parser.add_argument('--batch_size', type=list, default=1,help='batch size of trainset')
+parser.add_argument('--batch_size', type=int, default=1,help='batch size of trainset')
 
 # train
 parser.add_argument('--epochs', type=int, default=200, metavar='N',help='number of epochs to train (default: 200)')
