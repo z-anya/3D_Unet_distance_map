@@ -10,10 +10,13 @@ from .transforms import Center_Crop, Compose
 
 
 class Val_Dataset(dataset):
-    def __init__(self, args):
+    def __init__(self, args, is_test=False):
 
         self.args = args
-        self.filename_list = self.load_file_name_list(os.path.join(args.dataset_path, 'val_path_list.txt'))
+        if not is_test:
+            self.filename_list = self.load_file_name_list(os.path.join(args.dataset_path, 'val_path_list.txt'))
+        else:
+            self.filename_list = self.load_file_name_list(os.path.join(args.dataset_path, 'test_path_list.txt'))
 
         self.transforms = Compose([Center_Crop(base=16, max_size=args.val_crop_max_size)])
 

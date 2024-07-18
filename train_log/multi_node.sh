@@ -12,7 +12,7 @@ NODE_RANK="${1}"
 # 运行的节点数量。
 NODES="${2}"
 # 每个节点运行的进程数量。通常根据申请资源而定，例如申请的资源有 8 个GPU，则写 8 个进程，每个进程使用 1 个GPU
-NPROC_PER_NODE=7
+NPROC_PER_NODE=2
 
 # 主节点的地址和端口。
 MASTER_ADDR="${3}"
@@ -23,7 +23,7 @@ MASTER_PORT="29501"
 OUTPUT_LOG=test_train_rank"${NODE_RANK}".log
 gpus=$((NODES * NPROC_PER_NODE))
 micro_batch_size_per_gpu=1
-gradient_accumulation_steps=1
+gradient_accumulation_steps=8
 train_batch_size=$((gpus * micro_batch_size_per_gpu * gradient_accumulation_steps))
 echo $micro_batch_size_per_gpu
 echo $train_batch_size
@@ -36,6 +36,7 @@ torchrun \
      --max_restarts=3 \
      /home/dalhxwlyjsuo/guest_lizg/unet/train_UnitedNet.py \
      --world_size=$gpus \
+     --lr=0.00004 \
      --micro_batch_size_per_gpu=$micro_batch_size_per_gpu \
      --gradient_accumulation_steps=$gradient_accumulation_steps \
      --batch_size=$train_batch_size  >> "${OUTPUT_LOG}" 2>&1

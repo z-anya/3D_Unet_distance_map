@@ -26,7 +26,7 @@ parser.add_argument('--save',default='ResUNet',help='save path of trained model'
 parser.add_argument('--batch_size', type=int, default=1,help='batch size of trainset')
 
 # train
-parser.add_argument('--epochs', type=int, default=200, metavar='N',help='number of epochs to train (default: 200)')
+parser.add_argument('--epochs', type=int, default=400, metavar='N',help='number of epochs to train (default: 200)')
 parser.add_argument('--lr', type=float, default=0.00001, metavar='LR',help='learning rate (default: 0.0001)')
 parser.add_argument('--early-stop', default=30, type=int, help='early stopping (default: 30)')
 parser.add_argument('--crop_size', type=int, default=64)
@@ -38,6 +38,7 @@ parser.add_argument('--warmup_steps', type=int, default=0)
 parser.add_argument('--test_cut_size', type=int, default=64, help='size of sliding window')
 parser.add_argument('--test_cut_stride', type=int, default=24, help='stride of sliding window')
 parser.add_argument('--postprocess', type=bool, default=False, help='post process')
+parser.add_argument('--checkpoint', type=str, default='/home/dalhxwlyjsuo/guest_lizg/unet/train_log/checkpoints')
 
 #deepspeed
 parser.add_argument('--local_rank', type=int, default=0, help='Input batch size for training (default: 6)')

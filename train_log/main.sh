@@ -6,15 +6,15 @@
 #DSUB -l hws_gnode
 
 ### 指定单个节点的资源配置
-#DSUB -R 'cpu=30;gpu=7;mem=32000'
+#DSUB -R 'cpu=12;gpu=2;mem=12000'
 
 ### 指定副本数量，可以理解为计算节点数量。
-#DSUB -N 3
+#DSUB -N 4
 #DSUB -eo %J_error.out
 #DSUB -oo %J_log.out
 
 ### 重要配置！节点数量。跟 -N 指定的副本数量相同。
-NODE_NUM=3
+NODE_NUM=4
 ### 重要配置！作业脚本名称。
 SCRIPT="multi_node.sh"
 HOSTFILE="hostfile_${BATCH_JOB_ID}"
