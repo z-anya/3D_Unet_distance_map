@@ -1,4 +1,10 @@
+import sys
+
 from torch._C import dtype
+
+sys.path.append('/home/dalhxwlyjsuo/guest_lizg/unet')
+
+import config
 from utils.common import *
 from scipy import ndimage
 import numpy as np
@@ -35,7 +41,8 @@ class Img_DataSet(Dataset):
         self.label_np = sitk.GetArrayFromImage(self.seg)
         if self.n_labels==2:
             self.label_np[self.label_np > 0] = 1
-        self.label = torch.from_numpy(np.expand_dims(self.label_np,axis=0)).long()
+        # self.label = torch.from_numpy(np.expand_dims(self.label_np,axis=0)).long()
+        self.label = torch.from_numpy(self.label_np).long()
 
         # 预测结果保存
         self.result = None
@@ -43,7 +50,7 @@ class Img_DataSet(Dataset):
     def __getitem__(self, index):#图像返回数据集中索引喂index的数据块
         data = torch.from_numpy(self.data_np[index])
         data = torch.FloatTensor(data).unsqueeze(0)
-        return data
+        return data, self.label
 
     def __len__(self):
         return len(self.data_np)
@@ -108,10 +115,21 @@ class Img_DataSet(Dataset):
 
         return patches  # array with all the full_imgs divided in patches
 
-def Test_Datasets(dataset_path, args):
-    data_list = sorted(glob(os.path.join(dataset_path, 'ct/*')))
-    label_list = sorted(glob(os.path.join(dataset_path, 'label/*')))
+def Test_Datasets(dataset_path, label_path, args):
+    data_list = sorted(glob(dataset_path + '/*'))
+    label_list = sorted(glob(label_path + '/*'))
     print("The number of test samples is: ", len(data_list))
     for datapath, labelpath in zip(data_list, label_list):
         print("\nStart Evaluate: ", datapath)
         yield Img_DataSet(datapath, labelpath,args=args), datapath.split('-')[-1]
+
+
+
+if __name__ == '__main__':
+    data_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/WORD/WORD-V0.1.0/imagesVal'
+    label_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/WORD/WORD-V0.1.0/labelsVal'
+
+
+    datasets = Test_Datasets(data_path, label_path, config.args)
+    for item in datasets:
+        print(1)

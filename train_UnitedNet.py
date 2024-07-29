@@ -23,7 +23,7 @@ from deepspeed.ops.adam import FusedAdam
 from tqdm import tqdm
 import pdb
 
-from dataset.dataset_lits_test import Img_DataSet
+from dataset.dataset_lits_test import Img_DataSet, Test_Datasets
 from utils import loss as loss_module
 from transformers import PreTrainedModel, PretrainedConfig
 from torch.nn import functional as F
@@ -34,6 +34,7 @@ from config import args
 from dataset.dataset_lits_train import Train_Dataset
 from dataset.dataset_lits_val import Val_Dataset
 from models.zyx_Unet import UnitedNet, ZyxUNet
+from utils.common import to_one_hot_3d
 from utils.metrics import DiceAverage
 
 
@@ -211,8 +212,9 @@ def train_main(args):
     wandb.init(project="Unet",
                name=current,
                config=args)
-    loss_func = loss_module.DiceLoss()
-
+    dice_loss = loss_module.DiceLoss()
+    mse_loss = torch.nn.MSELoss()
+    loss_func = {'dice_loss': dice_loss, 'mse_loss': mse_loss}
     for epoch in range(args.epochs):
         train_one_epoch(seg_model, cl_model, dm_model, train_dataloader, val_dataloader, epoch, device, loss_func)
         if epoch % 50 == 0:
@@ -246,9 +248,11 @@ def train_one_epoch(seg_model,
             cl_output = cl_model.decoder(cl_mid, cl_maps)
             dm_output = dm_model.decoder(dm_mid, dm_maps)
             # loss
-            seg_loss = loss_func(seg_output, seg)
-            cl_loss = loss_func(cl_output, cl)
-            dm_loss = loss_func(dm_output, dm)
+            dice_loss = loss_func['dice_loss']
+            mse_loss = loss_func['mse_loss']
+            seg_loss = dice_loss(seg_output, seg)
+            cl_loss = dice_loss(cl_output, cl)
+            dm_loss = mse_loss(dm_output, dm)
 
             # backward
             seg_model.backward(seg_loss, retain_graph=True)
@@ -304,9 +308,11 @@ def val_step(seg_model,
                 cl_output = cl_model.decoder(cl_mid, cl_maps)
                 dm_output = dm_model.decoder(dm_mid, dm_maps)
                 # loss
-                seg_loss = loss_func(seg_output, seg)
-                cl_loss = loss_func(cl_output, cl)
-                dm_loss = loss_func(dm_output, dm)
+                dice_loss = loss_func['dice_loss']
+                mse_loss = loss_func['mse_loss']
+                seg_loss = dice_loss(seg_output, seg)
+                cl_loss = dice_loss(cl_output, cl)
+                dm_loss = mse_loss(dm_output, dm)
             # batch shape: (b, t, c, h, w) t is length of frame sequence
             eval_seg_loss += seg_loss
             eval_cl_loss += cl_loss
@@ -331,7 +337,23 @@ def test_main(args):
         deepspeed.init_distributed()
     local_rank = int(os.environ["LOCAL_RANK"])
     device = torch.device("cuda", local_rank)
-    # seg_unet, cl_unet, dm_unet = get_model(args)
+    seg_unet, cl_unet, dm_unet = get_model(args, args.checkpoint)
+    data_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/WORD/WORD-V0.1.0/imagesVal'
+    label_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/WORD/WORD-V0.1.0/labelsVal'
+    test_dataset = Test_Datasets(data_path, label_path, args)
+
+    for dataset, file_idx in test_dataset:
+        test_one(seg_unet, cl_unet, dm_unet, dataset, device, args)
+
+def test_new(args):
+    if args.local_rank == -1:
+        deepspeed.init_distributed()
+    else:
+        print(f"当前设备：{args.local_rank}")
+        # get_accelerator().set_device(args.local_rank)
+        deepspeed.init_distributed()
+    local_rank = int(os.environ["LOCAL_RANK"])
+    device = torch.device("cuda", local_rank)
     seg_unet, cl_unet, dm_unet = get_model(args, args.checkpoint)
     val_dataset = Val_Dataset(args)
     val_sampler = DistributedSampler(val_dataset)
@@ -340,7 +362,7 @@ def test_main(args):
     loss_func = loss_module.DiceLoss()
 
     seg_model = deepspeed.init_inference(seg_unet, dtype=torch.float32)
-    cl_model = deepspeed.init_inference(cl_unet, dtype=torch.float32 )
+    cl_model = deepspeed.init_inference(cl_unet, dtype=torch.float32)
     dm_model = deepspeed.init_inference(dm_unet, dtype=torch.float32)
 
     seg_model.eval()
@@ -386,6 +408,64 @@ def test_main(args):
     print(dice_metrics.avg)
 
 
+def test_one(seg_unet, cl_unet, dm_unet, test_dataset, device, args):
+    # val_sampler = DistributedSampler(test_dataset)
+    val_dataloader = DataLoader(dataset=test_dataset, batch_size=1)
+    dice_metrics = DiceAverage(args.n_labels)
+    loss_func = loss_module.DiceLoss()
+
+    seg_model = deepspeed.init_inference(seg_unet, dtype=torch.float32)
+    cl_model = deepspeed.init_inference(cl_unet, dtype=torch.float32)
+    dm_model = deepspeed.init_inference(dm_unet, dtype=torch.float32)
+
+    seg_model.eval()
+    cl_model.eval()
+    dm_model.eval()
+    # eval_steps = 0
+    # eval_seg_loss = 0
+    # eval_cl_loss = 0
+    # eval_dm_loss = 0
+    with tqdm(range(len(val_dataloader))) as pbar:
+        for i, (ct, seg,) in zip(pbar, val_dataloader):
+            with torch.no_grad():
+                ct = ct.to(device)
+                # pdb.set_trace()
+                seg = to_one_hot_3d(seg, args.n_labels)
+                seg = seg.to(device)
+                print(ct.shape)
+                print(seg.shape)
+                # cl = cl.to(device)
+                # dm = dm.to(device)
+                # encoder
+                cl_maps, cl_mid = cl_model.module.encoder(ct)
+                dm_maps, dm_mid = dm_model.module.encoder(ct)
+                seg_maps, seg_mid = seg_model.module.encoder(ct, cl_maps)
+
+                # attn block
+                seg_mid = seg_model.module.attn_block(seg_mid, dm_mid)
+
+                # decoder
+                seg_output = seg_model.module.decoder(seg_mid, seg_maps)
+                cl_output = cl_model.module.decoder(cl_mid, cl_maps)
+                dm_output = dm_model.module.decoder(dm_mid, dm_maps)
+
+                # seg_loss = loss_func(seg_output, seg)
+                # cl_loss = loss_func(cl_output, cl)
+                # dm_loss = loss_func(dm_output, dm)
+                # eval_seg_loss += seg_loss
+                # eval_cl_loss += cl_loss
+                # eval_dm_loss += dm_loss
+                # eval_steps += 1
+
+                dice_metrics.update(seg_output, seg)
+            del seg_output, cl_output, dm_output,
+            torch.cuda.empty_cache()
+    # print({"val_seg_loss": eval_seg_loss / eval_steps,
+    #        "val_cl_loss": eval_cl_loss / eval_steps,
+    #        "val_dm_loss": eval_dm_loss / eval_steps})
+
+    print(dice_metrics.avg)
+
 
 def get_train_parameters(model):
     # 可以自定义
@@ -399,5 +479,6 @@ if __name__ == '__main__':
     os.environ["WANDB_MODE"] = "offline"
     wandb.login(key="92f7db817e758b1939a5f7fa871f74dbeabbb0b1")
     train_main(args)
-    #
+
     # test_main(args)
+    # test_new(args)

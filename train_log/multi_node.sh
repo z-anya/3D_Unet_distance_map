@@ -23,7 +23,7 @@ MASTER_PORT="29501"
 OUTPUT_LOG=test_train_rank"${NODE_RANK}".log
 gpus=$((NODES * NPROC_PER_NODE))
 micro_batch_size_per_gpu=1
-gradient_accumulation_steps=8
+gradient_accumulation_steps=1
 train_batch_size=$((gpus * micro_batch_size_per_gpu * gradient_accumulation_steps))
 echo $micro_batch_size_per_gpu
 echo $train_batch_size
@@ -36,7 +36,7 @@ torchrun \
      --max_restarts=3 \
      /home/dalhxwlyjsuo/guest_lizg/unet/train_UnitedNet.py \
      --world_size=$gpus \
-     --lr=0.00004 \
+     --lr=0.00001  \
      --micro_batch_size_per_gpu=$micro_batch_size_per_gpu \
      --gradient_accumulation_steps=$gradient_accumulation_steps \
      --batch_size=$train_batch_size  >> "${OUTPUT_LOG}" 2>&1

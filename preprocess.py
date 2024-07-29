@@ -348,14 +348,21 @@ def rename():
 
 
 if __name__ == '__main__':
-    raw_dataset_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/WORD/WORD-V0.1.0/imagesTr'
-    label_dataset_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/WORD/word2colon/labelTr_colon'
-    cl_dataset_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/cnterline/WORD/colon_skeleton_expansion'
-    dm_dataset_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/WORD/label_bone_colon_dm'
-    fixed_dataset_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/fixed_data'
-    args = config.args
-    tool = LITS_preprocess(raw_dataset_path, fixed_dataset_path, args)
-    # tool.fix_data(raw_dataset_path, label_dataset_path, cl_dataset_path, dm_dataset_path)  # 对原始图像进行修剪并保存
-    tool.write_train_val_name_list()  # 创建索引txt文件
-    # rename()
-
+    # raw_dataset_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/WORD/WORD-V0.1.0/imagesTr'
+    # label_dataset_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/WORD/word2colon/labelTr_colon'
+    # cl_dataset_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/cnterline/WORD/colon_skeleton_expansion'
+    # dm_dataset_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/WORD/label_bone_colon_dm'
+    # fixed_dataset_path = '/home/dalhxwlyjsuo/guest_lizg/data/nii_data/fixed_data'
+    # args = config.args
+    # tool = LITS_preprocess(raw_dataset_path, fixed_dataset_path, args)
+    # # tool.fix_data(raw_dataset_path, label_dataset_path, cl_dataset_path, dm_dataset_path)  # 对原始图像进行修剪并保存
+    # tool.write_train_val_name_list()  # 创建索引txt文件
+    # # rename()
+    import torch
+    coords_h = torch.arange(2)
+    # coords_h = torch.tensor([1, 2, 3])
+    coords_w = torch.arange(2)
+    # coords_w = torch.tensor([4, 5])
+    coords = torch.meshgrid([coords_h, coords_w], indexing="ij")
+    print(coords[0])
+    print(coords[1])

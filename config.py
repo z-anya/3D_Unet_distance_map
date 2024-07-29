@@ -15,7 +15,7 @@ parser.add_argument('--lower', type=int, default=-200, help='')
 parser.add_argument('--norm_factor', type=float, default=200.0, help='')
 parser.add_argument('--expand_slice', type=int, default=20, help='')
 parser.add_argument('--min_slices', type=int, default=20, help='')
-parser.add_argument('--xy_down_scale', type=float, default=0.5, help='')
+parser.add_argument('--xy_down_scale', type=float, default=1.0, help='')
 parser.add_argument('--slice_down_scale', type=float, default=1.0, help='')
 parser.add_argument('--valid_rate', type=float, default=0.2, help='')
 
@@ -38,7 +38,7 @@ parser.add_argument('--warmup_steps', type=int, default=0)
 parser.add_argument('--test_cut_size', type=int, default=64, help='size of sliding window')
 parser.add_argument('--test_cut_stride', type=int, default=24, help='stride of sliding window')
 parser.add_argument('--postprocess', type=bool, default=False, help='post process')
-parser.add_argument('--checkpoint', type=str, default='/home/dalhxwlyjsuo/guest_lizg/unet/train_log/checkpoints')
+parser.add_argument('--checkpoint', type=str, default='/home/dalhxwlyjsuo/guest_lizg/unet/train_log/dm_with_mseloss_raw_param_checkpoints')
 
 #deepspeed
 parser.add_argument('--local_rank', type=int, default=0, help='Input batch size for training (default: 6)')
